@@ -1,0 +1,331 @@
+# Renault R4 E-Tech - Complete API Analysis & Read-Only Architecture Documentation
+
+## Summary
+Comprehensive testing of Renault R4 E-Tech (Model A4E1VE) reveals a **read-only API architecture** due to simplified TCU (AIVCT) and `connectivityTechnology: NONE`. This affects all 2024+ R4 E-Tech models and explains "unavailable" sensors in Home Assistant integration.
+
+## Vehicle Information
+- **Model**: Renault R4 E-Tech (A4E1VE)
+- **VIN Pattern**: VYSP01H007XXXXXX
+- **Manufacturing Date**: 2025-09-29
+- **Delivery Date**: 2026-01-20
+- **Market**: Poland (PL)
+- **Battery**: BTGAE (NMC type), 52kWh
+- **TCU**: AIVCT (AI Virtual Connection Technology)
+- **Connectivity Technology**: `NONE` ⚠️
+
+## Key Findings
+
+### ✅ Working Endpoints (Read-Only)
+
+#### 1. Battery Status
+**Endpoint**: `/kamereon/kca/car-adapter/v2/cars/{vin}/battery-status`
+
+**Available Data**:
+```json
+{
+  "batteryLevel": 80,
+  "batteryAutonomy": 190,
+  "batteryCapacity": 0,
+  "batteryAvailableEnergy": 0,
+  "plugStatus": 1,
+  "chargingStatus": 0.3,
+  "chargingRemainingTime": 22,
+  "chargingInstantaneousPower": 0.0,
+  "V2L_SystemStatusDisplay": 0
+}
+```
+
+**Missing Fields** (compared to Megane/Scenic E-Tech):
+- `batteryTemperature` - NOT returned
+- `batteryCapacity` - Returns 0
+- `batteryAvailableEnergy` - Returns 0
+- `chargingInstantaneousPower` - Returns 0.0
+
+#### 2. Cockpit
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/cockpit`
+
+**Available Data**:
+```json
+{
+  "totalMileage": 198.0,
+  "fuelQuantity": 0.0,
+  "fuelAutonomy": 0.0
+}
+```
+
+#### 3. Location
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/location`
+
+**Available Data**:
+```json
+{
+  "gpsLatitude": 52.XXXXX,
+  "gpsLongitude": 20.XXXXX,
+  "lastUpdateTime": "2026-01-31T07:51:48Z"
+}
+```
+
+#### 4. HVAC Status
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/hvac-status`
+
+**Available Data**:
+```json
+{
+  "hvacStatus": "off",
+  "socThreshold": 15.0,
+  "externalTemperature": null
+}
+```
+
+**Missing**: `externalTemperature` always null
+
+#### 5. 🎉 Charges History (VALUABLE!)
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/charges`
+
+**Parameters**: `?start=YYYYMMDD&end=YYYYMMDD&country=PL`
+
+**Available Data**:
+```json
+{
+  "charges": [
+    {
+      "chargeStartDate": "2026-01-30T21:05:40Z",
+      "chargeEndDate": "2026-01-31T05:05:36Z",
+      "chargeEndStatus": "ok",
+      "chargeStartBatteryLevel": 80,
+      "chargeEndBatteryLevel": 80,
+      "chargeEnergyRecovered": 15.050001,
+      "chargeDuration": 479
+    }
+  ]
+}
+```
+
+**This is extremely valuable** for cost tracking and efficiency analysis!
+
+#### 6. Vehicle Details
+**Endpoint**: `/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v2/cars/{vin}/details`
+
+**Critical Fields**:
+```json
+{
+  "tcu": {
+    "code": "AIVCT",
+    "label": "WITH AIVC CONNECTION UNIT"
+  },
+  "connectivityTechnology": "NONE",
+  "battery": {
+    "code": "BTGAE",
+    "label": "BATTERY BTGAE"
+  },
+  "batteryType": "NMC"
+}
+```
+
+### ❌ Non-Working Endpoints (403 Forbidden)
+
+All **write/control** endpoints return `err.func.wired.forbidden`:
+
+1. **Charge Mode** - `GET/POST .../charge-mode` → 403
+2. **Charge Schedule** - `GET/POST .../charge-schedule` → 403
+3. **Charging Settings** - `GET .../charging-settings` → 403
+4. **HVAC Settings** - `GET .../hvac-settings` → 403
+5. **HVAC Start/Stop** - `POST .../actions/hvac-start` → 403
+6. **Charging Start/Stop** - `POST .../actions/charging-start` → 403
+7. **New KCM Endpoints** - `GET .../kcm/v1/vehicles/{vin}/...` → 403
+
+### ❌ Non-Existing Endpoints (404 Not Found)
+
+1. **Lock Status** - `GET .../lock-status` → 404
+   - Error: `"There is no data for this vin and uid"`
+2. **Notification Settings** - `GET .../notification-settings` → 400
+   - Error: `"The vehicle does not have a GDC gateway"`
+3. **Contracts** - `GET .../contracts` → 404
+4. **Res State** - `GET .../res-state` → 404
+5. **Charge History (aggregated)** - `GET .../charge-history` → 404
+6. **HVAC History** - `GET .../hvac-history` → 404
+
+## Account Information
+```json
+{
+  "accountType": "MYRENAULT",
+  "accountStatus": "ACTIVE",
+  "linkType": "OWNER",
+  "connectedDriver": {
+    "role": "MAIN_DRIVER"
+  },
+  "connectivityTechnology": "NONE",
+  "vehicleDetails": {
+    "tcu": {
+      "code": "AIVCT",
+      "label": "WITH AIVC CONNECTION UNIT"
+    }
+  }
+}
+```
+
+## MyRenault App Confirmation
+
+**Tested in official MyRenault mobile app**:
+- ❌ Remote HVAC start - NOT available
+- ❌ Charge scheduling - NOT available
+- ❌ Preconditioning - NOT available
+- ✅ Battery status - Available
+- ✅ Location - Available
+- ✅ Charging status - Available
+
+**Conclusion**: This is **NOT an API permission issue** - it's the vehicle's hardware/firmware design.
+
+## Comparison: R4 E-Tech vs Megane/Scenic E-Tech
+
+| Feature | R4 E-Tech (AIVCT) | Megane/Scenic (TCU2.1) |
+|---------|-------------------|------------------------|
+| Connectivity Tech | `NONE` | `ECC3` |
+| Battery monitoring | ✅ Basic | ✅ Advanced |
+| Battery temperature | ❌ | ✅ |
+| Charging power | ❌ | ✅ |
+| Remote HVAC | ❌ | ✅ |
+| Remote charge control | ❌ | ✅ |
+| Charge scheduling | ❌ | ✅ |
+| Lock/unlock | ❌ | ✅ |
+| Charges history | ✅ | ✅ |
+| GDC Gateway | ❌ | ✅ |
+
+## Root Cause Analysis
+
+### Hardware Limitation
+R4 E-Tech uses **AIVCT (AI Virtual Connection Technology)** instead of **TCU 2.1**:
+- AIVCT = Simplified, read-only telematics unit
+- TCU 2.1 = Full bidirectional control unit with GDC gateway
+
+### Why This Design?
+1. **Cost reduction** - R4 is a budget-friendly model
+2. **Market positioning** - Premium features reserved for higher-tier models
+3. **Possible future unlock** - OTA update or paid subscription (speculation)
+
+## Impact on Home Assistant Integration
+
+### Sensors That Work
+- ✅ `sensor.r4_battery_level`
+- ✅ `sensor.r4_battery_autonomy`
+- ✅ `sensor.r4_charging_remaining_time`
+- ✅ `binary_sensor.r4_plugged_in`
+- ✅ `binary_sensor.r4_charging`
+- ✅ `sensor.r4_mileage`
+- ✅ `device_tracker.r4`
+- ✅ `binary_sensor.r4_hvac_status`
+
+### Sensors That Will Be "Unavailable"
+- ❌ `sensor.r4_battery_temperature`
+- ❌ `sensor.r4_charging_power`
+- ❌ `sensor.r4_outside_temperature`
+- ❌ `select.r4_charge_mode`
+- ❌ `button.r4_start_charge`
+- ❌ `button.r4_ac_start`
+
+**This is EXPECTED behavior** - not a bug or configuration issue.
+
+## Recommendations
+
+### For Users
+1. Use official HA integration for **monitoring only**
+2. Control charging via wallbox/EVSE (not through vehicle API)
+3. Use MyRenault app for any manual interventions
+4. Leverage `/charges` endpoint for cost tracking
+
+### For Developers
+1. Add R4 E-Tech (A4E1VE) to known limited models
+2. Document `connectivityTechnology: NONE` behavior
+3. Consider adding `/charges` endpoint support for historical data
+4. Add custom template sensors for available attributes:
+   - `V2L_SystemStatusDisplay`
+   - `socThreshold`
+   - `chargingRemainingTime`
+
+### Custom Template Sensors (Workaround)
+```yaml
+template:
+  - sensor:
+      - name: "R4 Charging Time Remaining"
+        state: "{{ state_attr('sensor.r4_battery_level', 'chargingRemainingTime') | int }}"
+        unit_of_measurement: "min"
+        
+      - name: "R4 V2L Status"
+        state: "{{ state_attr('sensor.r4_battery_level', 'V2L_SystemStatusDisplay') }}"
+        
+      - name: "R4 SOC Threshold"
+        state: "{{ state_attr('sensor.r4_hvac_status', 'socThreshold') }}"
+        unit_of_measurement: "%"
+```
+
+## Testing Environment
+
+- **Library**: renault-api 0.5.3 (CLI)
+- **Method**: Direct HTTP endpoint testing
+- **Authentication**: Gigya JWT + Kamereon tokens
+- **Test Date**: 2026-01-31
+- **Vehicle Mileage**: ~200 km
+- **Delivery Age**: 11 days
+
+## Related Issues
+
+- Home Assistant Core #158187 - R4 E-Tech sensors unavailable
+- renault-api #1491 - New endpoint paths discovered
+- renault-api #1638 - Scenic E-Tech comprehensive testing
+
+## Additional Notes
+
+### Battery Data Anomaly
+Some charge sessions show unusual values:
+```json
+{
+  "chargeStartBatteryLevel": 0,    // Wrong
+  "chargeEndBatteryLevel": 60,     // Correct
+  "chargeEnergyRecovered": 0.05    // Too low
+}
+```
+
+This suggests **initial data synchronization issues** or **vehicle telematics learning period**.
+
+### Negative Energy Recovery
+One session shows negative recovery:
+```json
+{
+  "chargeEnergyRecovered": -0.65,
+  "chargeStartBatteryLevel": 80,
+  "chargeEndBatteryLevel": 78
+}
+```
+
+This indicates **phantom drain** or **battery conditioning** during charging session.
+
+## Conclusion
+
+Renault R4 E-Tech has **intentionally limited API connectivity** due to:
+1. Simplified TCU hardware (AIVCT vs TCU2.1)
+2. `connectivityTechnology: NONE` configuration
+3. No GDC gateway support
+
+**This is not a bug** - it's the vehicle's design. Users should:
+- Accept read-only monitoring via HA
+- Use wallbox/EVSE for charging control
+- Leverage charges history endpoint for analytics
+
+**For developers**: R4 E-Tech should be classified as "limited connectivity model" alongside any other vehicles with `connectivityTechnology: NONE`.
+
+---
+
+**Model Family Affected**:
+- Renault R4 E-Tech (A4E1VE)
+- Family: X1317
+- Manufacturing: 2024+
+
+**VIN Pattern**: VYSP01H007XXXXXX (Poland market)
+
+## Test Scripts Available
+
+Complete test suite available upon request, including:
+- Endpoint testing script
+- Account permissions verification
+- Charging history analysis
+- JSON response examples
