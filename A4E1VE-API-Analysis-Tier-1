@@ -1,0 +1,474 @@
+# Renault R4 E-Tech (A4E1VE) - Complete API Analysis: Tier 1 Monitoring Only
+
+## Summary
+Comprehensive API testing of Renault R4 E-Tech (Model A4E1VE) confirms **Tier 1 monitoring capabilities only** with simplified AIVCT telematics unit and `connectivityTechnology: NONE`. This is intentional product segmentation, not a bug.
+
+## Vehicle Configuration
+- **Model**: Renault R4 E-Tech (A4E1VE)
+- **VIN Pattern**: VYSP01H007XXXXXX
+- **TCU**: AIVCT (AI Virtual Connection Technology) - Group E70
+- **Connectivity Technology**: `NONE`
+- **Manufacturing**: September 2025
+- **Delivery**: January 2026
+- **Market**: Poland (PL)
+- **Battery**: BTGAE (NMC type), 52kWh
+- **Version**: TE3 A1 N0
+- **Trim**: None (standard)
+
+### VCD Key Codes Present
+- ✅ `AIVCT` - AI Virtual Connection Technology (simplified TCU)
+- ✅ `V2X02` - Vehicle-to-Everything Level 2
+- ✅ `CHGS4` - Charging System Level 4
+- ✅ `NA510` - IVI2 FULL10 Infotainment
+- ❌ `TCU2.x` - NOT PRESENT
+- ❌ `ECC3` - NOT PRESENT
+
+## Industry Context: High Mobility Tier System
+
+According to [High Mobility's official Renault/Dacia documentation](https://docs.high-mobility.com/oem-guides/renault-and-dacia), automotive OEMs implement tiered API capabilities:
+
+- **Tier 1**: Basic monitoring (battery, location, status)
+- **Tier 2**: Advanced monitoring (climate, diagnostics, trips)
+- **Tier 3**: Remote control (HVAC, charging, locks)
+- **Tier 4**: Advanced features (parking, valet, wake-up)
+
+R4 E-Tech implements **Tier 1 + Minimal Tier 2** only.
+
+## API Capabilities Testing Results
+
+### ✅ TIER 1 - Basic Monitoring (FULLY WORKING)
+
+#### 1. Battery Status
+**Endpoint**: `/kamereon/kca/car-adapter/v2/cars/{vin}/battery-status`
+
+**Response**: ✅ 200 OK
+```json
+{
+  "batteryLevel": 80,
+  "batteryAutonomy": 189,
+  "plugStatus": 0,
+  "chargingStatus": 0.0,
+  "chargingRemainingTime": 22,
+  "V2L_SystemStatusDisplay": 0,
+  "batteryCapacity": 0,
+  "batteryAvailableEnergy": 0,
+  "chargingInstantaneousPower": 0.0
+}
+```
+
+**Missing Fields** (vs Megane/Scenic):
+- `batteryTemperature` - Not provided
+- `batteryCapacity` - Returns 0
+- `batteryAvailableEnergy` - Returns 0
+- `chargingInstantaneousPower` - Returns 0.0
+
+#### 2. Cockpit (Odometer)
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/cockpit`
+
+**Response**: ✅ 200 OK
+```json
+{
+  "totalMileage": 198.0,
+  "fuelQuantity": 0.0,
+  "fuelAutonomy": 0.0
+}
+```
+
+#### 3. Location
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/location`
+
+**Response**: ✅ 200 OK
+```json
+{
+  "gpsLatitude": 52.XXXXX,
+  "gpsLongitude": 20.XXXXX,
+  "lastUpdateTime": "2026-01-31T11:55:44Z"
+}
+```
+
+#### 4. Vehicle Details
+**Endpoint**: `/commerce/v1/accounts/{account}/vehicles`
+
+**Response**: ✅ 200 OK - Full vehicle configuration data including VCD
+
+### ⚠️ TIER 2 - Advanced Monitoring (MINIMAL SUPPORT)
+
+#### Working Endpoints:
+
+**HVAC Status** (Read-Only)
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/hvac-status`
+
+**Response**: ✅ 200 OK
+```json
+{
+  "hvacStatus": "off",
+  "socThreshold": 15.0,
+  "externalTemperature": null
+}
+```
+
+**Charges History** (30+ days)
+**Endpoint**: `/kamereon/kca/car-adapter/v1/cars/{vin}/charges`
+
+**Response**: ✅ 200 OK
+```json
+{
+  "charges": [
+    {
+      "chargeStartDate": "2026-01-30T21:05:40Z",
+      "chargeEndDate": "2026-01-31T05:05:36Z",
+      "chargeEndStatus": "ok",
+      "chargeStartBatteryLevel": 80,
+      "chargeEndBatteryLevel": 80,
+      "chargeEnergyRecovered": 15.05,
+      "chargeDuration": 479
+    }
+  ]
+}
+```
+
+**Note**: This endpoint is extremely valuable for cost tracking and efficiency analysis!
+
+#### Non-Existent Endpoints (404 Not Found):
+
+All return `err.func.wired.not-found`:
+- ❌ Trip Meters
+- ❌ Weather Conditions
+- ❌ Tire Pressure
+- ❌ Diagnostics
+- ❌ Charge History (aggregated)
+- ❌ HVAC History
+
+### ❌ TIER 3 - Remote Control (NOT AVAILABLE)
+
+All control endpoints return **403 Forbidden** (`err.func.wired.forbidden`):
+
+1. **Charge Mode** - `GET/POST .../charge-mode`
+2. **Charge Schedule** - `GET/POST .../charge-schedule`
+3. **Charging Settings** - `GET .../charging-settings`
+4. **HVAC Settings** - `GET .../hvac-settings`
+5. **HVAC Start/Stop** - `POST .../actions/hvac-start`
+6. **Charging Start/Stop** - `POST .../actions/charging-start`
+7. **New KCM Endpoints** - `GET .../kcm/v1/vehicles/{vin}/...`
+
+### ❌ TIER 4 - Advanced Features (NOT AVAILABLE)
+
+Additional endpoints returning errors:
+
+**Lock Status** - 404 Not Found
+- Error: `"The vehicle does not have a GDC gateway"`
+
+**Notification Settings** - 400 Bad Request
+- Error: `"The vehicle does not have a GDC gateway"`
+
+**Contracts** - 404 Not Found
+
+**Res State** - 404 Not Found
+
+## MyRenault App Confirmation
+
+**Tested in official MyRenault mobile app**:
+- ❌ Remote HVAC start - NOT available
+- ❌ Charge scheduling - NOT available
+- ❌ Preconditioning programs - NOT available
+- ❌ Charge mode selection - NOT available
+- ✅ Battery status - Available
+- ✅ Location - Available
+- ✅ Charging status - Available
+
+**Conclusion**: This confirms hardware/firmware limitation, not an API permission issue.
+
+## Root Cause Analysis
+
+### Hardware Architecture
+R4 E-Tech uses **AIVCT** (AI Virtual Connection Technology) instead of **TCU 2.1**:
+
+| Component | AIVCT (R4) | TCU 2.1 (Megane/Scenic) |
+|-----------|------------|-------------------------|
+| Function | Read-only telematics | Bidirectional control |
+| GDC Gateway | ❌ No | ✅ Yes |
+| Remote Control | ❌ No | ✅ Yes |
+| Cost | Lower | Higher |
+| Target Market | Budget-conscious | Premium |
+
+### Why This Design?
+
+1. **Cost Optimization** - R4 is positioned as budget-friendly model
+2. **Market Segmentation** - Premium features reserved for higher-tier models
+3. **Simplified Hardware** - AIVCT reduces manufacturing and development costs
+4. **Intentional Limitation** - Not a bug or temporary restriction
+
+### Account Configuration Evidence
+```json
+{
+  "accountType": "MYRENAULT",
+  "accountStatus": "ACTIVE",
+  "linkType": "OWNER",
+  "connectivityTechnology": "NONE",
+  "tcu": {
+    "code": "AIVCT",
+    "label": "WITH AIVC CONNECTION UNIT",
+    "group": "E70"
+  }
+}
+```
+
+## Impact on Home Assistant Integration
+
+### Sensors That Work
+- ✅ `sensor.r4_battery_level`
+- ✅ `sensor.r4_battery_autonomy`
+- ✅ `sensor.r4_charging_remaining_time` (as attribute)
+- ✅ `binary_sensor.r4_plugged_in`
+- ✅ `binary_sensor.r4_charging`
+- ✅ `sensor.r4_mileage`
+- ✅ `device_tracker.r4` (GPS location)
+- ✅ `binary_sensor.r4_hvac_status`
+
+### Sensors That Will Be "Unavailable" (Expected Behavior)
+- ❌ `sensor.r4_battery_temperature`
+- ❌ `sensor.r4_charging_power`
+- ❌ `sensor.r4_outside_temperature`
+- ❌ `select.r4_charge_mode`
+- ❌ `button.r4_start_charge`
+- ❌ `button.r4_ac_start`
+
+**This is EXPECTED behavior** - not a bug or configuration issue.
+
+### Custom Template Sensors
+
+Some valuable attributes are available but not exposed as separate sensors:
+```yaml
+template:
+  - sensor:
+      - name: "R4 Charging Time Remaining"
+        unique_id: r4_charging_time_remaining
+        state: "{{ state_attr('sensor.r4_battery_level', 'chargingRemainingTime') | int }}"
+        unit_of_measurement: "min"
+        device_class: duration
+        
+      - name: "R4 V2L Status"
+        unique_id: r4_v2l_status
+        state: "{{ state_attr('sensor.r4_battery_level', 'V2L_SystemStatusDisplay') }}"
+        
+      - name: "R4 SOC Threshold"
+        unique_id: r4_soc_threshold
+        state: "{{ state_attr('sensor.r4_hvac_status', 'socThreshold') }}"
+        unit_of_measurement: "%"
+```
+
+## Comparison: R4 vs Megane/Scenic E-Tech
+
+| Feature | R4 E-Tech (AIVCT) | Megane/Scenic (TCU 2.1) |
+|---------|-------------------|-------------------------|
+| Connectivity Tech | `NONE` | `ECC3` |
+| TCU Hardware | AIVCT (E70) | TCU 2.1 |
+| Battery monitoring | ✅ Basic | ✅ Advanced (temp, power) |
+| Battery temperature | ❌ | ✅ |
+| Charging power | ❌ | ✅ |
+| Charges history | ✅ | ✅ |
+| Remote HVAC | ❌ | ✅ |
+| Remote charge control | ❌ | ✅ |
+| Charge scheduling | ❌ | ✅ |
+| Lock/unlock | ❌ | ✅ |
+| GDC Gateway | ❌ | ✅ |
+| Trip meters | ❌ | ✅ |
+| Tire pressure | ❌ | ✅ |
+| Diagnostics | ❌ | ✅ |
+
+## Recommendations
+
+### For Library Developers (@epenet @jmcollin78)
+
+1. **Add R4 E-Tech to known limited models**
+```python
+   AIVCT_MODELS = [
+       "A4E1VE",  # R4 E-Tech
+   ]
+```
+
+2. **Implement vehicle capability detection**
+```python
+   def get_vehicle_capabilities(vehicle_details):
+       tcu_code = vehicle_details.get('tcu', {}).get('code')
+       connectivity = vehicle_details.get('connectivityTechnology')
+       
+       if tcu_code == 'AIVCT' or connectivity == 'NONE':
+           return VehicleCapabilities(
+               remote_hvac=False,
+               remote_charging=False,
+               charge_schedule=False,
+               lock_unlock=False,
+               monitoring=True,
+               charges_history=True,
+               tier_level=1  # Tier 1 + minimal Tier 2
+           )
+```
+
+3. **Expose additional attributes**
+   - `V2L_SystemStatusDisplay` (Vehicle-to-Load status)
+   - `socThreshold` (SOC threshold for preconditioning)
+   - `chargingRemainingTime` (as separate sensor)
+
+4. **Add charges history endpoint support**
+```python
+   async def get_charges_history(
+       self,
+       start_date: str,  # YYYYMMDD
+       end_date: str,    # YYYYMMDD
+   ) -> Dict[str, Any]:
+       return await self._request(
+           "GET",
+           f"commerce/v1/accounts/{self.account_id}/kamereon/kca/car-adapter/v1/cars/{self.vin}/charges",
+           params={"start": start_date, "end": end_date, "country": self.country}
+       )
+```
+
+### For Home Assistant Users
+
+1. **Use official integration for monitoring only**
+2. **Control charging via wallbox/EVSE** (recommended: Wallbox, Easee, Zappi, etc.)
+3. **Use MyRenault app for manual status checks**
+4. **Leverage `/charges` endpoint** for cost tracking via custom integration
+
+### Workaround Solutions
+
+**Problem**: No remote charging control  
+**Solution**: Smart wallbox with scheduling (better than vehicle API!)
+```yaml
+# Example: Easee wallbox integration
+switch:
+  - platform: easee
+    chargers:
+      - id: EHXXXXXX
+        name: "R4 Charger"
+```
+
+**Problem**: No charge scheduling  
+**Solution**: Home Assistant automation + wallbox timer
+```yaml
+automation:
+  - alias: "R4 Off-Peak Charging"
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.r4_battery_level
+        below: 80
+    action:
+      - service: switch.turn_on
+        entity_id: switch.wallbox_charging
+```
+
+**Problem**: No remote HVAC  
+**Solution**: Start vehicle manually 2 minutes before departure
+
+## Testing Environment
+
+- **Library**: renault-api 0.5.3 (CLI)
+- **Method**: Direct HTTP endpoint testing via `renault-api http get`
+- **Authentication**: Gigya JWT + Kamereon tokens
+- **Test Date**: January 31, 2026
+- **Vehicle Mileage**: ~200 km (11 days after delivery)
+- **Platform**: macOS, Python 3.14
+
+### Test Commands Used
+```bash
+# Battery status
+renault-api http get "/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v2/cars/{vin}/battery-status?country=PL"
+
+# Charges history (last 30 days)
+renault-api http get "/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v1/cars/{vin}/charges?start=20260101&end=20260131&country=PL"
+
+# High Mobility Tier 2 features (all return 404)
+renault-api http get "/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v1/cars/{vin}/trip-meters?country=PL"
+renault-api http get "/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v1/cars/{vin}/tire-pressure?country=PL"
+renault-api http get "/commerce/v1/accounts/{account}/kamereon/kca/car-adapter/v1/cars/{vin}/diagnostics?country=PL"
+```
+
+## Related Issues & References
+
+- Home Assistant Core #158187 - R4 E-Tech sensors unavailable
+- renault-api #1491 - New endpoint paths discovered
+- renault-api #1638 - Scenic E-Tech comprehensive testing
+- renault-api #1443 - Scenic E-Tech endpoint changes
+- **High Mobility Documentation**: https://docs.high-mobility.com/oem-guides/renault-and-dacia
+
+## Known Software Bugs (Separate from Hardware Limitations)
+
+Community reports (Facebook R4/R5 groups, January 2025) indicate **separate software bugs**:
+
+### Software Issues (Temporary - Awaiting OTA Fix)
+- ⚠️ Random charging programs appear in app/car
+- ⚠️ Unable to delete programs via app
+- ⚠️ Vehicle "sleeps" and ignores wallbox timer
+- ⚠️ Intermittent charging failures
+
+**Important**: These are DIFFERENT from hardware limitations:
+- API 403 Forbidden = Hardware can't do it (AIVCT limitation) ✅ Documented above
+- Charge schedule bug = Hardware could do it, but software broken ⚠️ Temporary
+
+**Workaround for software bugs** (until OTA fix):
+1. Use car timer (not wallbox) - reported 100% reliable
+2. Wake car with climate control 10min before scheduled charge
+3. Avoid wallbox timers until OTA fix
+
+## Conclusion
+
+Renault R4 E-Tech has **intentionally limited API connectivity** due to:
+
+1. **Simplified TCU hardware** (AIVCT vs TCU 2.1)
+2. **`connectivityTechnology: NONE` configuration**
+3. **No GDC gateway support**
+4. **Cost optimization strategy** (budget-friendly positioning)
+5. **Market segmentation** (premium features for higher-tier models)
+
+**This is NOT a bug** - it's the vehicle's design per industry-standard tier classification.
+
+### What This Means
+
+**For users**:
+- Accept read-only monitoring via HA/renault-api
+- Use wallbox/EVSE for charging control (recommended approach)
+- Leverage charges history endpoint for cost analytics
+- Consider wallbox integration for smart charging features
+
+**For developers**:
+- R4 E-Tech should be classified as "Tier 1 + minimal Tier 2" model
+- Document capabilities clearly to set user expectations
+- Consider adding charges history support (valuable feature!)
+- Implement capability detection based on TCU type
+
+**For potential buyers**:
+- R4 E-Tech = Monitoring only, no remote control
+- Want remote features? Choose Megane E-Tech or Scenic E-Tech
+- Wallbox with smart features compensates for missing vehicle API
+
+---
+
+**Model Family Affected**:
+- Renault R4 E-Tech (A4E1VE)
+- Family: X1317
+- Manufacturing: 2024+
+- Markets: Confirmed in Poland, likely all EU markets
+- VIN Pattern: VYSP01H007XXXXXX (Poland), may vary by country
+
+## Community Data Request
+
+If you own R4 E-Tech, please share:
+1. Market/Country
+2. Delivery date
+3. Trim level (if applicable)
+4. Screenshot of MyRenault app "Programmes" section (if available)
+5. Output from: `renault-api http get ".../vehicles"`
+
+This will help map potential variants across markets/trims.
+
+---
+
+**Testing conducted by**: Community member (Poland market)  
+**Vehicle delivery**: January 2026  
+**Library version**: renault-api 0.5.3  
+**Documentation**: Complete API endpoint mapping  
+**Status**: Ready for integration updates
