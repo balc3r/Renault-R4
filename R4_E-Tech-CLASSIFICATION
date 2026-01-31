@@ -1,0 +1,30 @@
+┌─────────────────────────────────────────────┐
+│  RENAULT R4 E-TECH API TIER CLASSIFICATION  │
+├─────────────────────────────────────────────┤
+│  TIER 1 (Basic Monitoring)      ✅ FULL     │
+│    - Battery Status              ✅          │
+│    - Charging Status             ✅          │
+│    - Location                    ✅          │
+│    - Odometer                    ✅          │
+│                                              │
+│  TIER 2 (Advanced Monitoring)   ⚠️ MINIMAL │
+│    - HVAC Status (read)          ✅          │
+│    - Charges History             ✅          │
+│    - Trip Meters                 ❌          │
+│    - Weather                     ❌          │
+│    - Tire Pressure               ❌          │
+│    - Diagnostics                 ❌          │
+│                                              │
+│  TIER 3 (Remote Control)        ❌ NONE     │
+│    - Climate Control             ❌          │
+│    - Charging Control            ❌          │
+│    - Door Locks                  ❌          │
+│                                              │
+│  TIER 4 (Advanced Features)     ❌ NONE     │
+│    - Remote Start                ❌          │
+│    - Valet Mode                  ❌          │
+└─────────────────────────────────────────────┘
+
+HARDWARE: AIVCT TCU
+CONNECTIVITY: NONE
+CONCLUSION: "Tier 1 + Minimal Tier 2" Profile
